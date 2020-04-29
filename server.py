@@ -108,7 +108,7 @@ class RequestHandler(BaseHTTPRequestHandler):
               targets = numpy.zeros(10) + 0.01
               targets[int(all_values[0])] = 0.99
               n.train(inputs, targets)
-              pickle.dump(n, open('neuron_network_values_backup.pkl', 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
+              pickle.dump(n, open('neuron_network_values_1000.pkl', 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
 
 
 
@@ -116,10 +116,11 @@ class RequestHandler(BaseHTTPRequestHandler):
       response = {}
       response["status"] = "OK"
       response["result"] = str(label)
+      response["percent"] = str(int(outputs[label]*100))
       self.send_dict_response(response)
 
 
-n = pickle.load(open('neuron_network_values_backup.pkl', 'rb'))
+n = pickle.load(open('neuron_network_values_1000.pkl', 'rb'))
 
 
 

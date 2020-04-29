@@ -53,18 +53,18 @@ def load_training_dataset():
 def train_neuron():
 
     input_nodes = 784
-    hidden_nodes = 500
+    hidden_nodes = 1000
     output_nodes = 10
 
     # learning rate
-    learning_rate = 0.2
+    learning_rate = 0.05
 
     n = neuralNetwork(input_nodes, hidden_nodes, output_nodes, learning_rate)
     training_data_file = open("datasets/mnist_train.csv", 'r')
     training_data_list = training_data_file.readlines()
     training_data_file.close()
     count = 0
-    epochs = 7
+    epochs = 15
     for e in range(epochs):
         for record in training_data_list:
             # split the record by the ',' commas
@@ -79,7 +79,10 @@ def train_neuron():
             count += 1
             print("Trained: " + str(count) + " / " + str(epochs * 60000))
 
-    pickle.dump(n, open('neuron_network_values.pkl', 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(n, open('neuron_network_values_1000.pkl', 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
+
+
+    pickle.dump(n, open('neuron_network_values_1000.pkl', 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
     print("Saved")
 
 def main():
