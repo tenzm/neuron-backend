@@ -1,10 +1,8 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from json import dumps
 import pickle
-import json
 import numpy
 import scipy.special
-import matplotlib.pyplot
 
 class neuralNetwork:
 
@@ -18,6 +16,9 @@ class neuralNetwork:
 
     def activation_function(self, x):
         return scipy.special.expit(x)
+
+    def inverse_activation_function (self, x):
+        return scipy.special.logit(x)
 
     def train(self, inputs_list, targets_list):
         inputs = numpy.array(inputs_list, ndmin=2).T
@@ -45,6 +46,34 @@ class neuralNetwork:
 
         return final_outputs
 
+    def backquery(self, targets_list):
+        # transpose the targets list to a vertical array
+        final_outputs = numpy.array(targets_list, ndmin=2).T
+
+        # calculate the signal into the final output layer
+        final_inputs = self.inverse_activation_function(final_outputs)
+
+        # calculate the signal out of the hidden layer
+        hidden_outputs = numpy.dot(self.who.T, final_inputs)
+        # scale them back to 0.01 to .99
+        hidden_outputs -= numpy.min(hidden_outputs)
+        hidden_outputs /= numpy.max(hidden_outputs)
+        hidden_outputs *= 0.98
+        hidden_outputs += 0.01
+
+        # calculate the signal into the hidden layer
+        hidden_inputs = self.inverse_activation_function(hidden_outputs)
+
+        # calculate the signal out of the input layer
+        inputs = numpy.dot(self.wih.T, hidden_inputs)
+        # scale them back to 0.01 to .99
+        inputs -= numpy.min(inputs)
+        inputs /= numpy.max(inputs)
+        inputs *= 0.98
+        inputs += 0.01
+
+        return inputs
+
 class RequestHandler(BaseHTTPRequestHandler):
 
   def _send_cors_headers(self):
@@ -66,9 +95,24 @@ class RequestHandler(BaseHTTPRequestHandler):
       self.send_response(200)
       self._send_cors_headers()
       self.end_headers()
-
       response = {}
       response["status"] = "OK"
+
+      values = list()
+      for i in range(10):
+          t = numpy.zeros(10) + 0.01
+          t[i] = 0.99
+
+          # get image data
+          image_data = n.backquery(t) * 255
+          image_data = image_data.astype(int)
+          print(','.join(map(str, image_data.tolist())).replace('[', '').replace(']', ''))
+          values.append(' '.join(map(str, image_data.tolist())).replace('[', '').replace(']', ''))
+          response["result" + str(i)] = values[i]
+          # matplotlib.pyplot.imsave("rrs.png", image_data.reshape((28, 28)), cmap='Greys')
+
+
+
       self.send_dict_response(response)
 
   def do_POST(self):
@@ -84,12 +128,13 @@ class RequestHandler(BaseHTTPRequestHandler):
 
       all_values = data_array.split(',')
 
+
+
       # correct answer is first value
       # scale and shift the inputs
       if len(all_values) == 784:
           inputs = (numpy.asfarray(all_values[0:]) / 255.0 * 0.99) + 0.01
           image = numpy.asfarray(all_values[0:]).reshape((28, 28))
-          matplotlib.pyplot.imsave("dsd.png", image, cmap='Greys')
           # query the network
           outputs = n.query(inputs)
           # the index of the highest value corresponds to the label
@@ -98,7 +143,7 @@ class RequestHandler(BaseHTTPRequestHandler):
       if len(all_values) == 785:
           inputs = (numpy.asfarray(all_values[1:]) / 255.0 * 0.99) + 0.01
           image = numpy.asfarray(all_values[1:]).reshape((28, 28))
-          matplotlib.pyplot.imsave("dsd.png", image, cmap='Greys')
+
           # query the network
           outputs = n.query(inputs)
           # the index of the highest value corresponds to the label
@@ -109,6 +154,8 @@ class RequestHandler(BaseHTTPRequestHandler):
               targets[int(all_values[0])] = 0.99
               n.train(inputs, targets)
               pickle.dump(n, open('neuron_network_values_1000.pkl', 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
+
+          print("train")
 
 
 
@@ -125,7 +172,7 @@ n = pickle.load(open('neuron_network_values_1000.pkl', 'rb'))
 
 
 
-print("Starting server")
+print("Запуск сервера")
 httpd = HTTPServer(("127.0.0.1", 9000), RequestHandler)
-print("Hosting server on port 9000")
+print("Сервер работает на порту 9000")
 httpd.serve_forever()

@@ -1,3 +1,5 @@
 .idea
 .vscode
 datasets
+__pycache__
+history

@@ -16,6 +16,8 @@ class neuralNetwork:
 
     def activation_function(self, x):
         return scipy.special.expit(x)
+    def inverse_activation_function(self, x):
+        return scipy.special.logit(x)
 
     def train(self, inputs_list, targets_list):
         inputs = numpy.array(inputs_list, ndmin=2).T
@@ -43,6 +45,34 @@ class neuralNetwork:
 
         return final_outputs
 
+    def backquery(self, targets_list):
+        # transpose the targets list to a vertical array
+        final_outputs = numpy.array(targets_list, ndmin=2).T
+
+        # calculate the signal into the final output layer
+        final_inputs = self.inverse_activation_function(final_outputs)
+
+        # calculate the signal out of the hidden layer
+        hidden_outputs = numpy.dot(self.who.T, final_inputs)
+        # scale them back to 0.01 to .99
+        hidden_outputs -= numpy.min(hidden_outputs)
+        hidden_outputs /= numpy.max(hidden_outputs)
+        hidden_outputs *= 0.98
+        hidden_outputs += 0.01
+
+        # calculate the signal into the hidden layer
+        hidden_inputs = self.inverse_activation_function(hidden_outputs)
+
+        # calculate the signal out of the input layer
+        inputs = numpy.dot(self.wih.T, hidden_inputs)
+        # scale them back to 0.01 to .99
+        inputs -= numpy.min(inputs)
+        inputs /= numpy.max(inputs)
+        inputs *= 0.98
+        inputs += 0.01
+
+        return inputs
+
 
 def load_training_dataset():
     data_file = open("datasets/mnist_train_100.csv", 'r')
@@ -53,18 +83,19 @@ def load_training_dataset():
 def train_neuron():
 
     input_nodes = 784
-    hidden_nodes = 1000
+    hidden_nodes = 300
     output_nodes = 10
 
     # learning rate
-    learning_rate = 0.05
+    learning_rate = 0.2
 
     n = neuralNetwork(input_nodes, hidden_nodes, output_nodes, learning_rate)
     training_data_file = open("datasets/mnist_train.csv", 'r')
     training_data_list = training_data_file.readlines()
     training_data_file.close()
     count = 0
-    epochs = 15
+    epochs = 1
+    w = 0
     for e in range(epochs):
         for record in training_data_list:
             # split the record by the ',' commas
@@ -76,6 +107,13 @@ def train_neuron():
             # all_values[0] is the target label for this record
             targets[int(all_values[0])] = 0.99
             n.train(inputs, targets)
+            if count % 33 == 0:
+                for q in [2, 5]:
+                    t = numpy.zeros(10) + 0.01
+                    t[q] = 0.99
+                    image_data = n.backquery(t) * 255
+                    matplotlib.pyplot.imsave("./history/"+str(q)+"/"+str(w)+".png", image_data.reshape((28, 28)), cmap='Greys')
+                w += 1
             count += 1
             print("Trained: " + str(count) + " / " + str(epochs * 60000))
 
@@ -86,6 +124,7 @@ def train_neuron():
     print("Saved")
 
 def main():
+
     """
     n = pickle.load(open('neuron_network_values.pkl', 'rb'))
 
